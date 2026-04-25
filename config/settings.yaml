@@ -1,0 +1,8 @@
+markets:
+  nyiso:
+    base_url: "https://mis.nyiso.com/public/csv"
+
+paths:
+  bronze: "bronze"
+  silver: "silver"
+  gold: "gold"
