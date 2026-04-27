@@ -45,10 +45,32 @@ External Data Sources (NYISO CSV/API)
 - Cleans and normalizes raw fields
 - Handles deduplication and type consistency
 
-### Gold Layer (Planned)
-- Builds analytics-ready datasets:
-  - Fact tables (price intervals, daily summaries)
-  - Dimension tables (market, location, product, date)
+### Gold Layer
+- Builds analytics-ready, conformed datasets using a star schema design
+- Combines multiple Silver datasets (e.g., NYISO Day-Ahead and Real-Time prices) into a unified model
+- Designed to support future expansion to additional markets (e.g., PJM, ERCOT)
+
+#### Fact Tables
+- **fact_market_price**
+  - Grain: one row per market, market product, zone, and timestamp
+  - Contains price measures and supporting metadata for analysis
+  - Partitioned by market and time (year/month) for efficient querying
+
+#### Dimension Tables
+- **dim_market**
+  - Represents each market (e.g., NYISO)
+
+- **dim_market_product**
+  - Represents market run types (e.g., Day-Ahead, Real-Time)
+
+- **dim_zone**
+  - Represents pricing locations (zones/nodes) within each market
+
+#### Key Design Principles
+- Uses conformed dimensions to enable cross-market analytics
+- Keeps source-specific logic in Silver; Gold is fully standardized
+- Supports incremental loading by processing only new market-date combinations
+- Optimized for downstream BI tools (e.g., Power BI, Fabric semantic models)
 
 ---
 

@@ -24,6 +24,9 @@ PRODUCT_CONFIG = {
     },
 }
 
+def bronze_file_exists(product: NyisoProduct, market_date: date) -> bool:
+    return get_bronze_output_path(product, market_date).exists()
+
 
 def build_nyiso_daily_url(product: NyisoProduct, market_date: date) -> str:
     product_config = PRODUCT_CONFIG[product]
@@ -79,11 +82,14 @@ def run_nyiso_bronze_price_load(
     product: NyisoProduct,
     start_date: date,
     end_date: date,
+    overwrite_existing: bool = False,
 ) -> list[Path]:
     """
     Loads NYISO daily price CSV files into Bronze Parquet.
 
     end_date is inclusive.
+
+    If overwrite_existing is False, dates already present in Bronze are skipped.
     """
 
     written_files: list[Path] = []
@@ -91,6 +97,13 @@ def run_nyiso_bronze_price_load(
     current_date = start_date
 
     while current_date <= end_date:
+        output_path = get_bronze_output_path(product, current_date)
+
+        if output_path.exists() and not overwrite_existing:
+            print(f"Skipping NYISO {product} for {current_date}: already exists in Bronze")
+            current_date += timedelta(days=1)
+            continue
+
         print(f"Loading NYISO {product} for {current_date}...")
 
         try:

@@ -19,7 +19,7 @@ def load_settings() -> dict:
 
 settings = load_settings()
 
-DATA_ROOT = Path(os.getenv("DATA_ROOT", PROJECT_ROOT / "data"))
+DATA_ROOT = Path(os.getenv("DATA_ROOT") or (PROJECT_ROOT / "data"))
 
 BRONZE_PATH = DATA_ROOT / settings["paths"]["bronze"]
 SILVER_PATH = DATA_ROOT / settings["paths"]["silver"]
