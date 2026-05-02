@@ -23,9 +23,6 @@ def main() -> None:
     elif command == "ui":
         run_ui()
 
-    elif command == "test":
-        test()
-
     else:
         raise ValueError(f"Unknown command: {command}")
 
@@ -51,21 +48,6 @@ def run_ui() -> None:
         ],
         cwd=project_root,
     )
-
-
-def test() -> None:
-    import duckdb
-
-    conn = duckdb.connect()
-
-    df = conn.execute("""
-        SELECT *
-        FROM read_parquet('G:/data/energy-price-analyst/gold/dimensions/dim_market_product.parquet')
-        LIMIT 5
-    """).fetchdf()
-
-    print(df.columns)
-
 
 if __name__ == "__main__":
     main()
