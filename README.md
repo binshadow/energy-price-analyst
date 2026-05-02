@@ -1,104 +1,236 @@
 # Energy Price Analyst
 
-An AI-powered data platform for ingesting, transforming, and analyzing energy market pricing data using a medallion architecture.
+A local, end-to-end data platform for ingesting, modeling, and analyzing wholesale energy market prices, enhanced with an AI-powered natural language query interface.
 
-This project builds an end-to-end pipeline that collects public market data (starting with NYISO), stores it in a Parquet-based warehouse (Bronze/Silver/Gold), and exposes curated datasets to an AI-driven analytics layer that supports natural language querying.
+This project demonstrates a modern data architecture using the medallion pattern combined with a local LLM, LLaMA via Ollama, to enable natural language to SQL analytics workflows.
 
 ---
 
 ## Overview
 
-The objective of this project is to simulate a production-style data platform that combines:
+Energy Price Analyst is designed to:
 
-- Data ingestion from external market sources
-- Structured storage using Parquet
-- Layered transformations (Bronze, Silver, Gold)
-- Dimensional data modeling
-- SQL-based analytics via DuckDB
-- Natural language query capabilities using AI
+- Ingest ISO market data, starting with NYISO LBMP
+- Transform raw data into a structured analytics model
+- Store data in a Parquet-based warehouse using Bronze, Silver, and Gold layers
+- Enable users to query data using natural language
+- Generate SQL dynamically using a local LLM
+- Return results through an interactive Streamlit UI
 
 ---
 
 ## Architecture
 
-External Data Sources (NYISO CSV/API)  
-→ Bronze Layer (raw, append-only data)  
-→ Silver Layer (cleaned and standardized data)  
-→ Gold Layer (fact and dimension tables)  
-→ DuckDB Query Layer  
-→ AI Analyst (natural language to SQL)
+```text
+Raw Data
+  ↓
+Bronze Layer
+  ↓
+Silver Layer
+  ↓
+Gold Layer
+  ↓
+DuckDB
+  ↓
+LLaMA via Ollama
+  ↓
+Streamlit UI
+```
 
 ---
 
-## Data Pipeline
-
-### Bronze Layer
-- Ingests raw NYISO price data (Day-Ahead and Real-Time LBMP)
-- Stores data as partitioned Parquet files
-- Adds ingestion metadata:
-  - `source_system`
-  - `source_product`
-  - `ingested_at_utc`
-
-### Silver Layer (Planned)
-- Standardizes schema across datasets
-- Cleans and normalizes raw fields
-- Handles deduplication and type consistency
-
-### Gold Layer
-- Builds analytics-ready, conformed datasets using a star schema design
-- Combines multiple Silver datasets (e.g., NYISO Day-Ahead and Real-Time prices) into a unified model
-- Designed to support future expansion to additional markets (e.g., PJM, ERCOT)
-
-#### Fact Tables
-- **fact_market_price**
-  - Grain: one row per market, market product, zone, and timestamp
-  - Contains price measures and supporting metadata for analysis
-  - Partitioned by market and time (year/month) for efficient querying
-
-#### Dimension Tables
-- **dim_market**
-  - Represents each market (e.g., NYISO)
-
-- **dim_market_product**
-  - Represents market run types (e.g., Day-Ahead, Real-Time)
-
-- **dim_zone**
-  - Represents pricing locations (zones/nodes) within each market
-
-#### Key Design Principles
-- Uses conformed dimensions to enable cross-market analytics
-- Keeps source-specific logic in Silver; Gold is fully standardized
-- Supports incremental loading by processing only new market-date combinations
-- Optimized for downstream BI tools (e.g., Power BI, Fabric semantic models)
-
----
-
-## AI Query Layer (Planned)
-
-The AI layer will allow users to query energy market data using natural language.
-
-Example queries:
-
-- What was the average price in NYC last week?
-- Which zone had the highest price volatility yesterday?
-- Show the largest price spikes this month
-- Compare day-ahead vs real-time prices for Zone J
-
-The system will:
-1. Convert natural language into SQL
-2. Execute queries against DuckDB
-3. Return structured results and summaries
-
----
-
-## Technology Stack
+## Tech Stack
 
 - Python
-- Pandas
 - DuckDB
-- Parquet (PyArrow)
-- Streamlit (planned)
-- Local or API-based language models
+- Parquet
+- Pandas
+- Streamlit
+- Ollama
+- LLaMA 3.1
+- YAML
+- python-dotenv
 
 ---
+
+## Project Structure
+
+```text
+src/
+  ai/                  # LLM integration and SQL generation
+  ingestion/           # Source ingestion logic
+  transformation/      # Bronze to Silver to Gold transforms
+  query/               # SQL execution and validation
+  interface/           # Streamlit UI
+  orchestration/       # ETL runner
+  utils/               # Config and helpers
+
+config/
+  settings.yaml        # Path and model configuration
+
+main.py                # Main command entry point
+.env.example           # Environment template
+```
+
+---
+
+## Data Model
+
+The Gold layer uses a star schema optimized for analytics.
+
+### Fact Table
+
+**fact_market_price**
+
+Grain: one row per market, product, zone or location, and timestamp.
+
+Measures include:
+
+- `lbmp`
+- `marginal_cost_losses`
+- `marginal_cost_congestion`
+
+### Dimensions
+
+- `dim_market`
+- `dim_market_product`
+- `dim_zone`
+
+---
+
+## Getting Started
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/binshadow/energy-price-analyst.git
+cd energy-price-analyst
+```
+
+### 2. Create virtual environment
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+For Mac or Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure environment
+
+Create a `.env` file from `.env.example`.
+
+```text
+DATA_ROOT=G:\data\energy-price-analyst
+AI_PROVIDER=ollama
+```
+
+### 5. Start Ollama
+
+Make sure Ollama is running and the model is installed.
+
+```bash
+ollama run llama3.1
+```
+
+---
+
+## Usage
+
+### Run ETL pipeline
+
+```bash
+python main.py etl
+```
+
+This will ingest source data, build the Silver layer, and generate Gold-layer analytics tables.
+
+### Launch AI interface
+
+```bash
+python main.py ui
+```
+
+Example questions:
+
+- Show top 10 highest LBMP prices
+- Average real-time price by zone last month
+- Compare day-ahead vs real-time prices
+
+---
+
+## AI Query Layer
+
+The system converts natural language questions into SQL using a local LLaMA model.
+
+```text
+User question
+  ↓
+Prompt and schema context
+  ↓
+LLaMA via Ollama
+  ↓
+Generated SQL
+  ↓
+SQL validation
+  ↓
+DuckDB execution
+  ↓
+Results returned to UI
+```
+
+### Safety Controls
+
+- Only SELECT statements are allowed
+- Destructive SQL keywords are blocked
+- Queries are restricted to approved Gold-layer views
+- Generated SQL does not use file paths
+
+---
+
+## Configuration
+
+| Variable | Description |
+|---|---|
+| `DATA_ROOT` | Root directory for all local data layers |
+| `AI_PROVIDER` | AI backend, currently `ollama` |
+
+---
+
+## Roadmap
+
+- Dynamic schema injection
+- Chart generation in the UI
+- AI-generated result summaries
+- Support for additional ISOs such as PJM and ERCOT
+- CLI query mode using `python main.py ask`
+- Data quality validation layer
+
+---
+
+## Why This Project Matters
+
+This project demonstrates:
+
+- End-to-end data engineering
+- Medallion architecture using local Parquet storage
+- Gold-layer star schema modeling
+- Natural language to SQL querying
+- Local-first AI integration
+- Modular, configuration-driven Python design
+
+---
+
+## License
+
+MIT License
