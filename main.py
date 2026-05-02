@@ -1,7 +1,8 @@
 import sys
+import subprocess
+from pathlib import Path
 
 from src.orchestration.etl_runner import run_etl
-from src.ai.analyst import ask_question
 
 
 def main() -> None:
@@ -10,8 +11,8 @@ def main() -> None:
             "Usage: python main.py <command> [args]\n"
             "Examples:\n"
             "  python main.py etl\n"
-            "  python main.py ask \"summarize prices\"\n"
-            "  python main.py ask \"show top price spikes\""
+            "  python main.py ui\n"
+            "  python main.py test"
         )
 
     command = sys.argv[1].strip().lower()
@@ -19,19 +20,51 @@ def main() -> None:
     if command == "etl":
         run_etl()
 
-    elif command == "ask":
-        question = " ".join(sys.argv[2:])
+    elif command == "ui":
+        run_ui()
 
-        if not question:
-            raise ValueError(
-                "Please provide a question.\n"
-                "Example: python main.py ask \"summarize prices\""
-            )
-
-        ask_question(question)
+    elif command == "test":
+        test()
 
     else:
         raise ValueError(f"Unknown command: {command}")
+
+
+def run_ui() -> None:
+    """
+    Launches the Streamlit interface.
+    """
+
+    project_root = Path(__file__).resolve().parent
+    app_path = project_root / "src" / "interface" / "streamlit_app.py"
+
+    print("Launching Streamlit UI...")
+    import sys
+
+    subprocess.run(
+        [
+            sys.executable,  # ← THIS is the key fix
+            "-m",
+            "streamlit",
+            "run",
+            str(app_path)
+        ],
+        cwd=project_root,
+    )
+
+
+def test() -> None:
+    import duckdb
+
+    conn = duckdb.connect()
+
+    df = conn.execute("""
+        SELECT *
+        FROM read_parquet('G:/data/energy-price-analyst/gold/dimensions/dim_market_product.parquet')
+        LIMIT 5
+    """).fetchdf()
+
+    print(df.columns)
 
 
 if __name__ == "__main__":

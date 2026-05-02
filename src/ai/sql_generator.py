@@ -2,7 +2,7 @@
 
 import requests
 
-from src.config.config import AI_PROVIDER, settings
+from src.utils.config import AI_PROVIDER, settings
 
 
 SQL_GENERATOR_SYSTEM_PROMPT = """
@@ -57,8 +57,10 @@ Dimension: dim_market_product
 Columns:
 - market_product_key
 - market_key
-- product_code
-- product_name
+- market_code
+- source_product
+- market_product_code
+- market_product_name
 
 Dimension: dim_zone
 Columns:
@@ -74,10 +76,13 @@ Relationships:
 
 Business definitions:
 - Use fact_market_price.lbmp for price questions unless the user asks for losses or congestion.
-- Day-ahead means product_code = 'day_ahead_lbmp'.
-- Real-time means product_code = 'real_time_lbmp'.
+- Day-ahead means dim_market_product.market_product_code = 'DAY_AHEAD'.
+- Real-time means dim_market_product.market_product_code = 'REAL_TIME'.
+- Product filtering must use dim_market_product.market_product_code.
+- Product display names should use dim_market_product.market_product_name.
+- Source product values should use dim_market_product.market_product_code.
 - Zone/location means dim_zone.zone_name.
-- NYISO means market_code = 'NYISO'.
+- NYISO means dim_market.market_code = 'NYISO'.
 
 SQL rules:
 - Always use table aliases:
@@ -89,13 +94,15 @@ SQL rules:
 - Use DuckDB-compatible SQL.
 - Use single quotes for strings.
 - Use DATE literals for date filters.
-- Prefer market_date for date filtering.
-- Prefer timestamp for hourly analysis.
+- Prefer f.market_date for date filtering.
+- Prefer f.timestamp for hourly analysis.
 - For month filters, use f.year and f.month.
-- month is stored as a two-character string such as '04'.
+- f.month is stored as a two-character string such as '04'.
 - Add ORDER BY for top, bottom, highest, lowest, or ranking questions.
 - If no limit is specified for ranking questions, use LIMIT 10.
 - Never use SELECT *.
+- Never use product_code.
+- Never use product_name.
 - Never generate INSERT, UPDATE, DELETE, MERGE, DROP, ALTER, CREATE, COPY, INSTALL, LOAD, ATTACH, DETACH, EXPORT, or PRAGMA.
 - Never use file paths in generated SQL.
 - Never hallucinate table names or column names.
@@ -107,7 +114,6 @@ Output rules:
 - No markdown.
 - No explanation.
 """.strip()
-
 
 def build_sql_prompt(question: str) -> str:
     return f"""
